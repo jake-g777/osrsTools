@@ -1,0 +1,169 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  quests        Quest[]
+  achievements  Achievement[]
+  clues         Clue[]
+  worldEvents   WorldEvent[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Quest {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  difficulty  String
+  length      String
+  series      String?
+  questPoints Int
+  userId      String
+  completed   Boolean  @default(false)
+  startedAt   DateTime?
+  completedAt DateTime?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  category    String
+  difficulty  String
+  userId      String
+  completed   Boolean  @default(false)
+  startedAt   DateTime?
+  completedAt DateTime?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Clue {
+  id          String   @id @default(cuid())
+  type        String
+  difficulty  String
+  location    String
+  userId      String
+  completed   Boolean  @default(false)
+  startedAt   DateTime?
+  completedAt DateTime?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WorldEvent {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  location    String
+  startTime   DateTime
+  endTime     DateTime
+  userId      String
+  completed   Boolean  @default(false)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Item {
+  id              Int      @id
+  name            String
+  description     String
+  highAlch        Int
+  lowAlch         Int
+  value           Int
+  members         Boolean
+  tradeable       Boolean
+  stackable       Boolean
+  noted           Boolean
+  noteable        Boolean
+  linkedIdItem    Int?
+  placeholder     Boolean
+  equipable       Boolean
+  equipableByPlayer Boolean
+  equipableWeapon Boolean
+  cost            Int
+  buyLimit        Int?
+  questItem       Boolean
+  releaseDate     String?
+  wikiName        String?
+  wikiUrl         String?
+  equipment       Json?
+  weapon          Json?
+}
+
+model Monster {
+  id              Int      @id
+  name            String
+  description     String
+  combatLevel     Int
+  hitpoints       Int
+  maxHit          Int
+  attackLevel     Int
+  strengthLevel   Int
+  defenceLevel    Int
+  magicLevel      Int
+  rangedLevel     Int
+  attackBonus     Int
+  strengthBonus   Int
+  rangedBonus     Int
+  magicBonus      Int
+  attackSpeed     Int
+  aggressive      Boolean
+  poisonous       Boolean
+  venomous        Boolean
+  immunePoison    Boolean
+  immuneVenom     Boolean
+  slayerLevel     Int?
+  slayerXp        Int?
+  wikiName        String?
+  wikiUrl         String?
+  drops           Json?
+}
+
+model GePrice {
+  id        Int      @id
+  itemId    Int
+  price     Int
+  timestamp DateTime @default(now())
+  item      Item     @relation(fields: [itemId], references: [id])
+} 
