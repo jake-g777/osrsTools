@@ -11,5 +11,8 @@
   },
   "devDependencies": {
     "prettier": "^3.2.5"
+  },
+  "dependencies": {
+    "next": "^15.3.3"
   }
 }

@@ -1,30 +1,6 @@
 import { Navbar } from "@/components/navbar"
 import { ToolCard } from "@/components/tool-card"
-
-const tools = [
-  {
-    name: "DPS Calculator",
-    description: "Calculate damage per second for various combat setups",
-    icon: "⚔️",
-    slug: "dps-calculator",
-    tags: ["Combat", "Calculator"],
-  },
-  {
-    name: "Clue Tracker",
-    description: "Track your clue scroll progress and rewards",
-    icon: "🎯",
-    slug: "clue-tracker",
-    tags: ["Clues", "Progress"],
-  },
-  {
-    name: "Tokkul Calculator",
-    description: "Calculate Tokkul values and exchange rates",
-    icon: "💎",
-    slug: "tokkul-calculator",
-    tags: ["Currency", "Calculator"],
-  },
-  // Add more tools here
-]
+import { tools } from "@/config/tools"
 
 export default function Home() {
   return (
