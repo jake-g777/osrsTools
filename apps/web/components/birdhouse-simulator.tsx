@@ -9,32 +9,59 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { X } from "lucide-react"
+import { collectBirdhouse, type BirdhouseTier, type LootDrop } from "@/lib/birdhouse"
 
-// Birdhouse types and their base XP
-const BIRDHOUSE_TYPES = [
-  { name: "Regular", xp: 280, level: 5 },
-  { name: "Oak", xp: 420, level: 14 },
-  { name: "Willow", xp: 560, level: 24 },
-  { name: "Teak", xp: 700, level: 34 },
-  { name: "Maple", xp: 820, level: 44 },
-  { name: "Mahogany", xp: 960, level: 49 },
-  { name: "Yew", xp: 1020, level: 59 },
-  { name: "Magic", xp: 1140, level: 74 },
-  { name: "Redwood", xp: 1200, level: 89}
+// Types
+interface BirdhouseType {
+  name: string;
+  xp: number;
+  level: number;
+  tier: BirdhouseTier;
+}
+
+interface SimulationResults {
+  hunterXp: number;
+  craftingXp: number;
+  loot: LootDrop[];
+}
+
+interface SimulationError {
+  message: string;
+  field?: 'startLevel' | 'endLevel' | 'runs' | 'type';
+}
+
+// Constants
+const BIRDHOUSE_TYPES: BirdhouseType[] = [
+  { name: "Regular", xp: 280, level: 5, tier: 'regular' as BirdhouseTier },
+  { name: "Oak", xp: 420, level: 14, tier: 'oak' as BirdhouseTier },
+  { name: "Willow", xp: 560, level: 24, tier: 'willow' as BirdhouseTier },
+  { name: "Teak", xp: 700, level: 34, tier: 'teak' as BirdhouseTier },
+  { name: "Maple", xp: 820, level: 44, tier: 'maple' as BirdhouseTier },
+  { name: "Mahogany", xp: 960, level: 49, tier: 'mahogany' as BirdhouseTier },
+  { name: "Yew", xp: 1020, level: 59, tier: 'yew' as BirdhouseTier },
+  { name: "Magic", xp: 1140, level: 74, tier: 'magic' as BirdhouseTier },
+  { name: "Redwood", xp: 1200, level: 89, tier: 'redwood' as BirdhouseTier }
 ]
 
-// Common bird nests and their drop rates
-const BIRD_NESTS = [
-  { name: "Empty", chance: 0.4, image: "/images/items/empty_nest.png" },
-  { name: "Seed", chance: 0.3, image: "/images/items/seed_nest.png" },
-  { name: "Ring", chance: 0.2, image: "/images/items/ring_nest.png" },
-  { name: "Egg", chance: 0.1, image: "/images/items/egg_nest.png" },
-]
-
-// Official OSRS XP table
+// Official OSRS XP table (1-99)
 const XP_TABLE = [
   0, 83, 174, 276, 388, 512, 650, 801, 969, 1154, 1358, 1584, 1833, 2107, 2411, 2746, 3115, 3523, 3973, 4470, 5018, 5624, 6291, 7028, 7842, 8740, 9730, 10824, 12031, 13363, 14833, 16456, 18247, 20224, 22406, 24815, 27473, 30408, 33648, 37224, 41171, 45529, 50339, 55649, 61512, 67983, 75127, 83014, 91721, 101333, 111945, 123660, 136594, 150872, 166636, 184040, 203254, 224466, 247886, 273742, 302288, 333804, 368599, 407015, 449428, 496254, 547953, 605032, 668051, 737627, 814445, 899257, 992895, 1096278, 1210421, 1336443, 1475581, 1629200, 1798808, 1986068, 2192818, 2421087, 2673114, 2951373, 3258594, 3597792, 3972294, 4385776, 4842295, 5346332, 5902831, 6517253, 7195629, 7944614, 8771558, 9684577, 10692629, 11805606, 13034431
 ]
+
+// Helper function to get XP for a level
+function getXpForLevel(level: number): number {
+  return XP_TABLE[level - 1] || 0
+}
+
+// Helper function to get level for XP
+function getLevelForXp(xp: number): number {
+  for (let level = 1; level <= 99; level++) {
+    if (XP_TABLE[level] > xp) {
+      return level
+    }
+  }
+  return 99
+}
 
 export function BirdhouseSimulator() {
   const [calculationType, setCalculationType] = useState<'runs' | 'levels'>('runs')
@@ -43,16 +70,50 @@ export function BirdhouseSimulator() {
   const [endLevel, setEndLevel] = useState(2)
   const [selectedType, setSelectedType] = useState(BIRDHOUSE_TYPES[0].name)
   const [hasRabbitFoot, setHasRabbitFoot] = useState(false)
-  const [results, setResults] = useState<{
-    hunterXp: number;
-    craftingXp: number;
-    nests: Record<string, number>;
-  } | null>(null)
+  const [results, setResults] = useState<SimulationResults | null>(null)
   const [simulatedRuns, setSimulatedRuns] = useState<number | null>(null)
+  const [error, setError] = useState<SimulationError | null>(null)
 
-  const calculateRequiredRuns = (startLevel: number, endLevel: number, xpPerRun: number) => {
-    const startXp = XP_TABLE[startLevel - 1]
-    const endXp = XP_TABLE[endLevel - 1]
+  const validateInputs = (): boolean => {
+    setError(null)
+
+    // Validate birdhouse type
+    const birdhouse = BIRDHOUSE_TYPES.find(b => b.name === selectedType)
+    if (!birdhouse) {
+      setError({ message: "Invalid birdhouse type selected", field: 'type' })
+      return false
+    }
+
+    // Validate level-based calculation
+    if (calculationType === 'levels') {
+      if (startLevel < 1 || startLevel > 98) {
+        setError({ message: "Start level must be between 1 and 98", field: 'startLevel' })
+        return false
+      }
+      if (endLevel <= startLevel || endLevel > 99) {
+        setError({ message: "End level must be higher than start level and not exceed 99", field: 'endLevel' })
+        return false
+      }
+      if (startLevel < birdhouse.level) {
+        setError({ message: `Start level must be at least ${birdhouse.level} for ${birdhouse.name} birdhouses`, field: 'startLevel' })
+        return false
+      }
+    }
+
+    // Validate run-based calculation
+    if (calculationType === 'runs') {
+      if (runs < 1 || runs > 1000) {
+        setError({ message: "Number of runs must be between 1 and 1000", field: 'runs' })
+        return false
+      }
+    }
+
+    return true
+  }
+
+  const calculateRequiredRuns = (startLevel: number, endLevel: number, xpPerRun: number): number => {
+    const startXp = getXpForLevel(startLevel)
+    const endXp = getXpForLevel(endLevel)
     const xpNeeded = endXp - startXp
     return Math.ceil(xpNeeded / xpPerRun)
   }
@@ -64,56 +125,80 @@ export function BirdhouseSimulator() {
     if (endLevel <= newStartLevel) {
       setEndLevel(Math.min(99, newStartLevel + 1))
     }
+    setError(null)
   }
 
   const handleEndLevelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value) || startLevel + 1
     const newEndLevel = Math.max(startLevel + 1, Math.min(99, value))
     setEndLevel(newEndLevel)
+    setError(null)
+  }
+
+  const handleRunsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value) || 1
+    setRuns(Math.max(1, Math.min(1000, value)))
+    setError(null)
   }
 
   const simulateRun = () => {
+    if (!validateInputs()) return
+
     const birdhouse = BIRDHOUSE_TYPES.find(b => b.name === selectedType)
     if (!birdhouse) return
-    // Each run = 4 birdhouses
-    const xpPerRun = birdhouse.xp * 4
-    const runsToSimulate = calculationType === 'levels' 
-      ? calculateRequiredRuns(startLevel, endLevel, xpPerRun)
-      : runs
 
-    let hunterXp = 0
-    let craftingXp = 0
-    const nests: Record<string, number> = {}
+    try {
+      // Each run = 4 birdhouses
+      const xpPerRun = birdhouse.xp * 4
+      const runsToSimulate = calculationType === 'levels' 
+        ? calculateRequiredRuns(startLevel, endLevel, xpPerRun)
+        : runs
 
-    for (let i = 0; i < runsToSimulate; i++) {
-      // Add XP for 4 birdhouses per run
-      hunterXp += birdhouse.xp * 4
-      craftingXp += Math.floor(birdhouse.xp * 0.2) * 4
-      // Simulate loot for 4 birdhouses per run
-      for (let b = 0; b < 4; b++) {
-        // Simulate nest drops (1-3 nests per birdhouse, +1 if rabbit foot)
-        const baseNestCount = Math.floor(Math.random() * 3) + 1
-        const nestCount = hasRabbitFoot ? baseNestCount + 1 : baseNestCount
-        for (let j = 0; j < nestCount; j++) {
-          const roll = Math.random()
-          let cumulativeChance = 0
-          for (const nest of BIRD_NESTS) {
-            cumulativeChance += nest.chance
-            if (roll <= cumulativeChance) {
-              nests[nest.name] = (nests[nest.name] || 0) + 1
-              break
-            }
-          }
+      let hunterXp = 0
+      let craftingXp = 0
+      const lootMap = new Map<string, number>()
+
+      // Simulate each run (4 birdhouses per run)
+      for (let i = 0; i < runsToSimulate; i++) {
+        // Add XP for 4 birdhouses
+        hunterXp += birdhouse.xp * 4
+        // Crafting XP is 20% of Hunter XP, rounded down
+        craftingXp += Math.floor(birdhouse.xp * 0.2) * 4
+
+        // Simulate loot for 4 birdhouses
+        for (let j = 0; j < 4; j++) {
+          const loot = collectBirdhouse(
+            calculationType === 'levels' ? startLevel : birdhouse.level,
+            birdhouse.tier,
+            hasRabbitFoot
+          )
+          
+          // Aggregate loot
+          loot.forEach(item => {
+            lootMap.set(item.id, (lootMap.get(item.id) || 0) + item.qty)
+          })
         }
       }
+
+      // Convert loot map to array
+      const lootArray: LootDrop[] = Array.from(lootMap.entries()).map(([id, qty]) => ({
+        id,
+        qty
+      }))
+
+      setResults({ hunterXp, craftingXp, loot: lootArray })
+      setSimulatedRuns(runsToSimulate)
+    } catch (err) {
+      setError({ 
+        message: err instanceof Error ? err.message : "An error occurred during simulation" 
+      })
     }
-    setResults({ hunterXp, craftingXp, nests })
-    setSimulatedRuns(runsToSimulate)
   }
 
   const handleClear = () => {
     setResults(null)
     setSimulatedRuns(null)
+    setError(null)
   }
 
   return (
@@ -124,11 +209,21 @@ export function BirdhouseSimulator() {
         </CardHeader>
         <CardContent className="space-y-4 pb-4 pt-2">
           <div className="text-xs text-rs-gold/80 italic mb-1">Each birdhouse run assumes 4 birdhouses are checked.</div>
-          <div className="space-y-2">
+          
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded p-3 text-red-500 text-sm">
+              {error.message}
+            </div>
+          )}
+
+          <div className="space-y-4">
             <Label className="text-rs-gold text-lg">Calculation Method</Label>
             <RadioGroup
               value={calculationType}
-              onValueChange={(value) => setCalculationType(value as 'runs' | 'levels')}
+              onValueChange={(value) => {
+                setCalculationType(value as 'runs' | 'levels')
+                setError(null)
+              }}
               className="flex gap-3"
             >
               <div className="flex items-center space-x-2">
@@ -150,9 +245,10 @@ export function BirdhouseSimulator() {
                   id="runs"
                   type="number"
                   min="1"
+                  max="1000"
                   value={runs}
-                  onChange={(e) => setRuns(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="rs-input h-9 text-base"
+                  onChange={handleRunsChange}
+                  className={`rs-input h-9 text-base ${error?.field === 'runs' ? 'border-red-500' : ''}`}
                 />
               </div>
             ) : (
@@ -166,7 +262,7 @@ export function BirdhouseSimulator() {
                     max="98"
                     value={startLevel}
                     onChange={handleStartLevelChange}
-                    className="rs-input h-9 text-base"
+                    className={`rs-input h-9 text-base ${error?.field === 'startLevel' ? 'border-red-500' : ''}`}
                   />
                 </div>
                 <div className="space-y-2">
@@ -178,20 +274,21 @@ export function BirdhouseSimulator() {
                     max="99"
                     value={endLevel}
                     onChange={handleEndLevelChange}
-                    className="rs-input h-9 text-base"
+                    className={`rs-input h-9 text-base ${error?.field === 'endLevel' ? 'border-red-500' : ''}`}
                   />
-                  {endLevel <= startLevel && (
-                    <p className="text-red-500 text-sm mt-1">
-                      End level must be higher than start level
-                    </p>
-                  )}
                 </div>
               </>
             )}
             <div className="space-y-2">
               <Label htmlFor="type" className="text-rs-gold text-lg">Birdhouse Type</Label>
-              <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger className="rs-input h-9 text-base">
+              <Select 
+                value={selectedType} 
+                onValueChange={(value) => {
+                  setSelectedType(value)
+                  setError(null)
+                }}
+              >
+                <SelectTrigger className={`rs-input h-9 text-base ${error?.field === 'type' ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Select birdhouse type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -216,7 +313,11 @@ export function BirdhouseSimulator() {
             </Label>
           </div>
 
-          <Button onClick={simulateRun} className="rs-button w-full h-10 text-base mt-2">
+          <Button 
+            onClick={simulateRun} 
+            className="rs-button w-full h-10 text-base mt-2"
+            disabled={!!error}
+          >
             Simulate {calculationType === 'levels' ? 'Level Range' : 'Runs'}
           </Button>
         </CardContent>
@@ -241,31 +342,34 @@ export function BirdhouseSimulator() {
                 <span className="text-rs-gold/80 text-base font-normal">from {simulatedRuns.toLocaleString()} birdhouse runs</span>
               )}
             </div>
-            <div className="grid grid-cols-4 gap-4">
-              {Object.entries(results.nests).map(([type, count]) => {
-                const nestInfo = BIRD_NESTS.find(n => n.name === type)
-                return (
-                  <div key={type} className="relative bg-[#2D2319] rounded p-3 flex flex-col items-center">
+            {results.loot.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {results.loot.map((item) => (
+                  <div key={item.id} className="relative bg-[#2D2319] rounded p-3 flex flex-col items-center">
                     <div className="relative">
                       <img
-                        src={nestInfo?.image || '/images/items/placeholder.png'}
-                        alt={type}
+                        src={`/images/items/${item.id}.png`}
+                        alt={item.id}
                         className="w-16 h-16"
                         onError={(e) => {
                           e.currentTarget.src = '/images/items/placeholder.png'
                         }}
                       />
                       <div className="absolute -bottom-1 -right-1 bg-[#2D2319] text-rs-gold px-2 rounded text-base border border-rs-gold/30">
-                        {count}
+                        {item.qty.toLocaleString()}
                       </div>
                     </div>
                     <div className="text-center text-rs-gold text-base mt-2">
-                      {type}
+                      {item.id.replace(/_/g, ' ')}
                     </div>
                   </div>
-                )
-              })}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-rs-gold/60 text-lg py-8">
+                No loot obtained from simulation
+              </div>
+            )}
           </div>
 
           {/* Slim Results Row */}
