@@ -28,4 +28,25 @@ export const tools: Tool[] = [
     slug: "birdhouse-simulator",
     tags: ["Skilling", "Simulator"],
   },
+  {
+    name: "Giant Seaweed Calculator",
+    description: "Calculate materials needed for crafting training with giant seaweed",
+    icon: "🌊",
+    slug: "giant-seaweed-calculator",
+    tags: ["Skilling", "Calculator"],
+  },
+  {
+    name: "Agility Calculator",
+    description: "Calculate XP and time needed for Agility training",
+    icon: "🏃",
+    slug: "agility-calculator",
+    tags: ["Skilling", "Calculator"],
+  },
+  {
+    name: "Wilderness Agility Simulator",
+    description: "Simulate training at the Wilderness Agility Course",
+    icon: "🏃‍♂️",
+    slug: "wilderness-agility-simulator",
+    tags: ["Skilling", "Simulator"],
+  },
 ] 

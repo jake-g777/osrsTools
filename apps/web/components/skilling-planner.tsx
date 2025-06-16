@@ -73,7 +73,7 @@ export function SkillingPlanner() {
             value={selectedSkill}
             onValueChange={setSelectedSkill}
           >
-            <SelectTrigger id="skill">
+            <SelectTrigger id="skill" className="rs-input h-8 text-xs">
               <SelectValue placeholder="Choose a skill">
                 {selectedSkill && (
                   <div className="flex items-center gap-2">
@@ -89,7 +89,7 @@ export function SkillingPlanner() {
                   <SelectItem
                     key={skill.name}
                     value={skill.name}
-                    className="cursor-pointer rounded-md px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                    className="cursor-pointer rounded-md px-2 py-1.5 text-xs outline-none hover:bg-accent hover:text-accent-foreground"
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-lg">{skill.icon}</span>

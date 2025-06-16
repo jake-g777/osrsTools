@@ -13,6 +13,7 @@
     "prettier": "^3.2.5"
   },
   "dependencies": {
+    "@radix-ui/react-popover": "^1.1.14",
     "next": "^15.3.3"
   }
 }
