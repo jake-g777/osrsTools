@@ -291,12 +291,12 @@ export function BirdhouseSimulator() {
                   setError(null)
                 }}
               >
-                <SelectTrigger className={`rs-input h-9 text-base ${error?.field === 'type' ? 'border-red-500' : ''}`}>
+                <SelectTrigger className={`rs-input h-8 text-xs ${error?.field === 'type' ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Select birdhouse type" />
                 </SelectTrigger>
                 <SelectContent>
                   {BIRDHOUSE_TYPES.map((type) => (
-                    <SelectItem key={type.name} value={type.name}>
+                    <SelectItem key={type.name} value={type.name} className="text-xs pl-4">
                       {type.name} (Level {type.level})
                     </SelectItem>
                   ))}
