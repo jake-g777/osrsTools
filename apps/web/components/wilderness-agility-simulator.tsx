@@ -16,17 +16,20 @@ interface SimulationResults {
 }
 
 export function WildernessAgilitySimulator() {
-  const [startLevel, setStartLevel] = useState(1)
-  const [endLevel, setEndLevel] = useState(2)
+  const [startLevel, setStartLevel] = useState('')
+  const [endLevel, setEndLevel] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [results, setResults] = useState<SimulationResults | null>(null)
 
   const validateInputs = (): boolean => {
-    if (startLevel < 1 || startLevel > 98) {
+    const start = parseInt(startLevel)
+    const end = parseInt(endLevel)
+    
+    if (isNaN(start) || start < 1 || start > 98) {
       setError("Start level must be between 1 and 98")
       return false
     }
-    if (endLevel <= startLevel || endLevel > 99) {
+    if (isNaN(end) || end <= start || end > 99) {
       setError("End level must be higher than start level and not exceed 99")
       return false
     }
@@ -37,6 +40,9 @@ export function WildernessAgilitySimulator() {
   const simulate = () => {
     if (!validateInputs()) return
 
+    const start = parseInt(startLevel)
+    const end = parseInt(endLevel)
+
     // Constants for Wilderness Agility Course
     const XP_PER_LAP = 571.4
     const LAPS_PER_HOUR = 83 // 45 seconds per lap + 2:10 bank time per hour
@@ -44,8 +50,8 @@ export function WildernessAgilitySimulator() {
     const MARK_PRICE = 30000 // Current GE price for mark of grace
 
     // Calculate XP needed
-    const startXP = getXPForLevel(startLevel)
-    const endXP = getXPForLevel(endLevel)
+    const startXP = getXPForLevel(start)
+    const endXP = getXPForLevel(end)
     const xpNeeded = endXP - startXP
 
     // Calculate laps needed
@@ -83,8 +89,8 @@ export function WildernessAgilitySimulator() {
   }
 
   const handleClear = () => {
-    setStartLevel(1)
-    setEndLevel(2)
+    setStartLevel('')
+    setEndLevel('')
     setError(null)
     setResults(null)
   }
@@ -115,7 +121,7 @@ export function WildernessAgilitySimulator() {
                 min="1"
                 max="98"
                 value={startLevel}
-                onChange={(e) => setStartLevel(Math.max(1, Math.min(98, parseInt(e.target.value) || 1)))}
+                onChange={(e) => setStartLevel(e.target.value)}
                 className="rs-input h-9 text-base"
               />
             </div>
@@ -124,10 +130,10 @@ export function WildernessAgilitySimulator() {
               <Input
                 id="endLevel"
                 type="number"
-                min={startLevel + 1}
+                min="1"
                 max="99"
                 value={endLevel}
-                onChange={(e) => setEndLevel(Math.max(startLevel + 1, Math.min(99, parseInt(e.target.value) || startLevel + 1)))}
+                onChange={(e) => setEndLevel(e.target.value)}
                 className="rs-input h-9 text-base"
               />
             </div>

@@ -66,20 +66,13 @@ function getLevelForXp(xp: number): number {
 export function BirdhouseSimulator() {
   const [calculationType, setCalculationType] = useState<'runs' | 'levels'>('runs')
   const [runs, setRuns] = useState(1)
-  const [startLevel, setStartLevel] = useState(1)
-  const [endLevel, setEndLevel] = useState(2)
-  const [endLevelInput, setEndLevelInput] = useState('2')
+  const [startLevel, setStartLevel] = useState('')
+  const [endLevel, setEndLevel] = useState('')
   const [selectedType, setSelectedType] = useState(BIRDHOUSE_TYPES[0].name)
   const [hasRabbitFoot, setHasRabbitFoot] = useState(false)
   const [results, setResults] = useState<SimulationResults | null>(null)
   const [simulatedRuns, setSimulatedRuns] = useState<number | null>(null)
   const [error, setError] = useState<SimulationError | null>(null)
-
-  const handleEndLevelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setEndLevelInput(value)
-    setError(null)
-  }
 
   const validateInputs = (): boolean => {
     setError(null)
@@ -93,8 +86,8 @@ export function BirdhouseSimulator() {
 
     // Validate level-based calculation
     if (calculationType === 'levels') {
-      const startNum = parseInt(startLevel.toString())
-      const endNum = parseInt(endLevelInput)
+      const startNum = parseInt(startLevel)
+      const endNum = parseInt(endLevel)
       
       if (isNaN(startNum) || startNum < 1 || startNum > 98) {
         setError({ message: "Start level must be between 1 and 98", field: 'startLevel' })
@@ -128,22 +121,6 @@ export function BirdhouseSimulator() {
     return Math.ceil(xpNeeded / xpPerRun)
   }
 
-  const handleStartLevelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value) || 1
-    const newStartLevel = Math.max(1, Math.min(98, value))
-    setStartLevel(newStartLevel)
-    if (endLevel <= newStartLevel) {
-      setEndLevel(Math.min(99, newStartLevel + 1))
-    }
-    setError(null)
-  }
-
-  const handleRunsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value) || 1
-    setRuns(Math.max(1, Math.min(1000, value)))
-    setError(null)
-  }
-
   const simulateRun = () => {
     if (!validateInputs()) return
 
@@ -154,7 +131,7 @@ export function BirdhouseSimulator() {
       // Each run = 4 birdhouses
       const xpPerRun = birdhouse.xp * 4
       const runsToSimulate = calculationType === 'levels' 
-        ? calculateRequiredRuns(startLevel, parseInt(endLevelInput), xpPerRun)
+        ? calculateRequiredRuns(parseInt(startLevel), parseInt(endLevel), xpPerRun)
         : runs
 
       let hunterXp = 0
@@ -171,7 +148,7 @@ export function BirdhouseSimulator() {
         // Simulate loot for 4 birdhouses
         for (let j = 0; j < 4; j++) {
           const loot = collectBirdhouse(
-            calculationType === 'levels' ? startLevel : birdhouse.level,
+            calculationType === 'levels' ? parseInt(startLevel) : birdhouse.level,
             birdhouse.tier,
             hasRabbitFoot
           )
@@ -250,7 +227,7 @@ export function BirdhouseSimulator() {
                   min="1"
                   max="1000"
                   value={runs}
-                  onChange={handleRunsChange}
+                  onChange={(e) => setRuns(Math.max(1, Math.min(1000, parseInt(e.target.value) || 1)))}
                   className={`rs-input h-9 text-base ${error?.field === 'runs' ? 'border-red-500' : ''}`}
                 />
               </div>
@@ -264,7 +241,7 @@ export function BirdhouseSimulator() {
                     min="1"
                     max="98"
                     value={startLevel}
-                    onChange={handleStartLevelChange}
+                    onChange={(e) => setStartLevel(e.target.value)}
                     className={`rs-input h-9 text-base ${error?.field === 'startLevel' ? 'border-red-500' : ''}`}
                   />
                 </div>
@@ -275,8 +252,8 @@ export function BirdhouseSimulator() {
                     type="number"
                     min="1"
                     max="99"
-                    value={endLevelInput}
-                    onChange={handleEndLevelChange}
+                    value={endLevel}
+                    onChange={(e) => setEndLevel(e.target.value)}
                     className={`rs-input h-9 text-base ${error?.field === 'endLevel' ? 'border-red-500' : ''}`}
                   />
                 </div>

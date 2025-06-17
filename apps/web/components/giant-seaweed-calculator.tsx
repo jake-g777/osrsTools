@@ -101,8 +101,8 @@ interface CalculationResults {
 
 export function GiantSeaweedCalculator() {
   const [calculationType, setCalculationType] = useState<'levels' | 'xp'>('levels')
-  const [startLevel, setStartLevel] = useState(1)
-  const [endLevel, setEndLevel] = useState(2)
+  const [startLevel, setStartLevel] = useState('')
+  const [endLevel, setEndLevel] = useState('')
   const [targetXP, setTargetXP] = useState(0)
   const [method, setMethod] = useState<keyof typeof METHODS>('18:3_pickup')
   const [invSeaweed, setInvSeaweed] = useState(0)
@@ -193,12 +193,14 @@ export function GiantSeaweedCalculator() {
   }
 
   const addSegment = () => {
-    if (segments.length >= endLevel - startLevel) return
+    const start = parseInt(startLevel)
+    const end = parseInt(endLevel)
+    if (isNaN(start) || isNaN(end) || segments.length >= end - start) return
 
     const lastSegment = segments[segments.length - 1]
-    const newStartLevel = lastSegment ? lastSegment.endLevel + 1 : startLevel
-    const remainingLevels = endLevel - newStartLevel
-    const newEndLevel = Math.min(newStartLevel + Math.floor(remainingLevels / 2), endLevel)
+    const newStartLevel = lastSegment ? lastSegment.endLevel + 1 : start
+    const remainingLevels = end - newStartLevel
+    const newEndLevel = Math.min(newStartLevel + Math.floor(remainingLevels / 2), end)
     
     const newSegment = {
       id: Math.random().toString(36).substr(2, 9),
@@ -233,7 +235,7 @@ export function GiantSeaweedCalculator() {
     const warnings: { [key: string]: string } = {}
 
     if (type === 'start') {
-      if (index === 0 && level < startLevel) {
+      if (index === 0 && level < parseInt(startLevel)) {
         warnings[`${segmentId}-start`] = `Start level cannot be lower than ${startLevel}`
       }
       if (index > 0 && level < segments[index - 1].endLevel) {
@@ -249,7 +251,7 @@ export function GiantSeaweedCalculator() {
       if (index < segments.length - 1 && level >= segments[index + 1].startLevel) {
         warnings[`${segmentId}-end`] = `End level must be lower than next segment's start level (${segments[index + 1].startLevel})`
       }
-      if (index === segments.length - 1 && level > endLevel) {
+      if (index === segments.length - 1 && level > parseInt(endLevel)) {
         warnings[`${segmentId}-end`] = `End level cannot exceed ${endLevel}`
       }
     }
@@ -264,15 +266,29 @@ export function GiantSeaweedCalculator() {
 
     // Validate inputs
     if (calculationType === 'levels') {
-      if (startLevel < 1 || startLevel > 98) {
-        setError("Start level must be between 1 and 98")
-        setResults(null)
-        return
-      }
-      if (endLevel <= startLevel || endLevel > 99) {
-        setError("End level must be higher than start level and not exceed 99")
-        setResults(null)
-        return
+      const start = startLevel ? parseInt(startLevel) : 0
+      const end = endLevel ? parseInt(endLevel) : 0
+      
+      if (startLevel && endLevel) {
+        if (start < 1 || start > 98) {
+          setError("Start level must be between 1 and 98")
+          setResults(null)
+          return
+        }
+        if (end <= start || end > 99) {
+          setError("End level must be higher than start level and not exceed 99")
+          setResults(null)
+          return
+        }
+
+        // Add initial segment
+        const initialSegment = {
+          id: Math.random().toString(36).substr(2, 9),
+          startLevel: start,
+          endLevel: end,
+          glassItem: getGlassItemForLevel(start)
+        }
+        setSegments([initialSegment])
       }
     } else {
       if (targetXP <= 0) {
@@ -281,15 +297,6 @@ export function GiantSeaweedCalculator() {
         return
       }
     }
-
-    // Add initial segment
-    const initialSegment: Segment = {
-      id: Math.random().toString(36).substr(2, 9),
-      startLevel,
-      endLevel,
-      glassItem: getGlassItemForLevel(startLevel)
-    }
-    setSegments([initialSegment])
   }, [calculationType, startLevel, endLevel, targetXP])
 
   useEffect(() => {
@@ -339,7 +346,7 @@ export function GiantSeaweedCalculator() {
         </CardHeader>
         <CardContent className="space-y-8 pb-4 pt-2">
           <div className="text-xs text-rs-gold/80 italic mb-1">
-            Calculate materials needed for crafting training with giant seaweed.
+            Calculate XP and materials needed for Giant Seaweed crafting.
           </div>
 
           {error && (
@@ -352,7 +359,7 @@ export function GiantSeaweedCalculator() {
             <Label className="text-rs-gold text-lg">Calculation Method</Label>
             <RadioGroup
               value={calculationType}
-              onValueChange={(value) => {
+              onValueChange={(value: string) => {
                 setCalculationType(value as 'levels' | 'xp')
                 setError(null)
               }}
@@ -379,7 +386,7 @@ export function GiantSeaweedCalculator() {
                   min="1"
                   max="98"
                   value={startLevel}
-                  onChange={(e) => setStartLevel(Math.max(1, Math.min(98, parseInt(e.target.value) || 1)))}
+                  onChange={(e) => setStartLevel(e.target.value)}
                   className="rs-input h-9 text-base"
                 />
               </div>
@@ -388,10 +395,10 @@ export function GiantSeaweedCalculator() {
                 <Input
                   id="endLevel"
                   type="number"
-                  min={startLevel + 1}
+                  min="1"
                   max="99"
                   value={endLevel}
-                  onChange={(e) => setEndLevel(Math.max(startLevel + 1, Math.min(99, parseInt(e.target.value) || startLevel + 1)))}
+                  onChange={(e) => setEndLevel(e.target.value)}
                   className="rs-input h-9 text-base"
                 />
               </div>
@@ -487,7 +494,7 @@ export function GiantSeaweedCalculator() {
                       </Button>
                       <Button
                         onClick={addSegment}
-                        disabled={segments.length >= endLevel - startLevel}
+                        disabled={segments.length >= parseInt(endLevel) - parseInt(startLevel)}
                         className="rs-button h-8 px-3 text-sm"
                       >
                         Add Segment
