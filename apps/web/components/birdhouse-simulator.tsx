@@ -68,11 +68,18 @@ export function BirdhouseSimulator() {
   const [runs, setRuns] = useState(1)
   const [startLevel, setStartLevel] = useState(1)
   const [endLevel, setEndLevel] = useState(2)
+  const [endLevelInput, setEndLevelInput] = useState('2')
   const [selectedType, setSelectedType] = useState(BIRDHOUSE_TYPES[0].name)
   const [hasRabbitFoot, setHasRabbitFoot] = useState(false)
   const [results, setResults] = useState<SimulationResults | null>(null)
   const [simulatedRuns, setSimulatedRuns] = useState<number | null>(null)
   const [error, setError] = useState<SimulationError | null>(null)
+
+  const handleEndLevelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setEndLevelInput(value)
+    setError(null)
+  }
 
   const validateInputs = (): boolean => {
     setError(null)
@@ -86,15 +93,18 @@ export function BirdhouseSimulator() {
 
     // Validate level-based calculation
     if (calculationType === 'levels') {
-      if (startLevel < 1 || startLevel > 98) {
+      const startNum = parseInt(startLevel.toString())
+      const endNum = parseInt(endLevelInput)
+      
+      if (isNaN(startNum) || startNum < 1 || startNum > 98) {
         setError({ message: "Start level must be between 1 and 98", field: 'startLevel' })
         return false
       }
-      if (endLevel <= startLevel || endLevel > 99) {
+      if (isNaN(endNum) || endNum <= startNum || endNum > 99) {
         setError({ message: "End level must be higher than start level and not exceed 99", field: 'endLevel' })
         return false
       }
-      if (startLevel < birdhouse.level) {
+      if (startNum < birdhouse.level) {
         setError({ message: `Start level must be at least ${birdhouse.level} for ${birdhouse.name} birdhouses`, field: 'startLevel' })
         return false
       }
@@ -128,13 +138,6 @@ export function BirdhouseSimulator() {
     setError(null)
   }
 
-  const handleEndLevelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value) || startLevel + 1
-    const newEndLevel = Math.max(startLevel + 1, Math.min(99, value))
-    setEndLevel(newEndLevel)
-    setError(null)
-  }
-
   const handleRunsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value) || 1
     setRuns(Math.max(1, Math.min(1000, value)))
@@ -151,7 +154,7 @@ export function BirdhouseSimulator() {
       // Each run = 4 birdhouses
       const xpPerRun = birdhouse.xp * 4
       const runsToSimulate = calculationType === 'levels' 
-        ? calculateRequiredRuns(startLevel, endLevel, xpPerRun)
+        ? calculateRequiredRuns(startLevel, parseInt(endLevelInput), xpPerRun)
         : runs
 
       let hunterXp = 0
@@ -202,7 +205,7 @@ export function BirdhouseSimulator() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="space-y-8">
       <Card className="rs-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-rs-gold text-2xl">Birdhouse Loot Simulator</CardTitle>
@@ -220,7 +223,7 @@ export function BirdhouseSimulator() {
             <Label className="text-rs-gold text-lg">Calculation Method</Label>
             <RadioGroup
               value={calculationType}
-              onValueChange={(value) => {
+              onValueChange={(value: string) => {
                 setCalculationType(value as 'runs' | 'levels')
                 setError(null)
               }}
@@ -270,9 +273,9 @@ export function BirdhouseSimulator() {
                   <Input
                     id="endLevel"
                     type="number"
-                    min={startLevel + 1}
+                    min="1"
                     max="99"
-                    value={endLevel}
+                    value={endLevelInput}
                     onChange={handleEndLevelChange}
                     className={`rs-input h-9 text-base ${error?.field === 'endLevel' ? 'border-red-500' : ''}`}
                   />
@@ -283,7 +286,7 @@ export function BirdhouseSimulator() {
               <Label htmlFor="type" className="text-rs-gold text-lg">Birdhouse Type</Label>
               <Select 
                 value={selectedType} 
-                onValueChange={(value) => {
+                onValueChange={(value: string) => {
                   setSelectedType(value)
                   setError(null)
                 }}
@@ -309,7 +312,7 @@ export function BirdhouseSimulator() {
               onCheckedChange={(checked) => setHasRabbitFoot(checked as boolean)}
             />
             <Label htmlFor="rabbitFoot" className="text-rs-gold text-base">
-              Wearing Strung Rabbit Foot (+1 nest per run)
+              Wearing Strung Rabbit Foot
             </Label>
           </div>
 
@@ -343,23 +346,23 @@ export function BirdhouseSimulator() {
               )}
             </div>
             {results.loot.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                 {results.loot.map((item) => (
-                  <div key={item.id} className="relative bg-[#2D2319] rounded p-3 flex flex-col items-center">
+                  <div key={item.id} className="relative bg-[#2D2319] rounded p-2 flex flex-col items-center">
                     <div className="relative">
                       <img
                         src={`/images/items/${item.id}.png`}
                         alt={item.id}
-                        className="w-16 h-16"
+                        className="w-12 h-12"
                         onError={(e) => {
                           e.currentTarget.src = '/images/items/placeholder.png'
                         }}
                       />
-                      <div className="absolute -bottom-1 -right-1 bg-[#2D2319] text-rs-gold px-2 rounded text-base border border-rs-gold/30">
+                      <div className="absolute -bottom-1 -right-1 bg-[#2D2319] text-rs-gold px-1.5 rounded text-sm border border-rs-gold/30">
                         {item.qty.toLocaleString()}
                       </div>
                     </div>
-                    <div className="text-center text-rs-gold text-base mt-2">
+                    <div className="text-center text-rs-gold text-sm mt-1">
                       {item.id.replace(/_/g, ' ')}
                     </div>
                   </div>

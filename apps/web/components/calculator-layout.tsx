@@ -12,9 +12,17 @@ import { usePathname } from "next/navigation"
 interface CalculatorLayoutProps {
   children: React.ReactNode
   title: string
+  toolRelatedInfo?: {
+    title: string
+    links: Array<{
+      name: string
+      url: string
+    }>
+    tips?: string[]
+  }
 }
 
-export function CalculatorLayout({ children, title }: CalculatorLayoutProps) {
+export function CalculatorLayout({ children, title, toolRelatedInfo }: CalculatorLayoutProps) {
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(true)
   const [comment, setComment] = React.useState("")
   const [comments, setComments] = React.useState<Array<{ text: string; author: string; date: string }>>([])
@@ -119,6 +127,34 @@ export function CalculatorLayout({ children, title }: CalculatorLayoutProps) {
           </CardHeader>
           <CardContent className="pt-6">
             <div className="space-y-6">
+              {/* Tool-specific related info */}
+              {toolRelatedInfo && (
+                <div className="border-b-2 border-rs-brown/30 pb-6">
+                  <h3 className="font-rs text-lg mb-3 text-rs-gold/90">{toolRelatedInfo.title}</h3>
+                  {toolRelatedInfo.links && toolRelatedInfo.links.length > 0 && (
+                    <ul className="space-y-3 text-base mb-4">
+                      {toolRelatedInfo.links.map((link, index) => (
+                        <li key={index}>
+                          <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-white/80 hover:text-rs-gold/90 transition-colors">
+                            {link.name}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {toolRelatedInfo.tips && toolRelatedInfo.tips.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="font-rs text-base mb-2 text-rs-gold/90">Tips</h4>
+                      <ul className="space-y-2 text-sm text-white/80">
+                        {toolRelatedInfo.tips.map((tip, index) => (
+                          <li key={index}>{tip}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="border-b-2 border-rs-brown/30 pb-6">
                 <h3 className="font-rs text-lg mb-3 text-rs-gold/90">OSRS Wiki Guides</h3>
                 <ul className="space-y-3 text-base">
